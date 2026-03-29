@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Datasheet Expert Agent</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+
+        <header>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div id="bot-logo">🤖</div>
+                <div>
+                    <h1 style="margin: 0; font-size: 1.2rem; letter-spacing: 0.5px;">Datasheet Expert Agent</h1>
+                    <p id="status-text" style="margin: 0; font-size: 0.8rem; opacity: 0.9;">Online</p>
+                </div>
+            </div>
+
+            <div class="controls-bar">
+                <div class="control-group">
+                    <label for="pdf-input">Carica Documento</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="file" id="pdf-input" accept=".pdf">
+                        <button id="upload-btn">CARICA</button>
+                    </div>
+                    <div id="loader-wrapper" class="loader-wrapper">
+                        <div class="spinner"></div>
+                        <span>Elaborazione in corso...</span>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="doc-selector">Seleziona Documento</label>
+                    <select id="doc-selector">
+                        <option value="">In attesa di file...</option>
+                    </select>
+                </div>
+            </div>
+        </header>
+
+        <main id="chat-window">
+            <div class="msg ai">
+                Benvenuto. Carica un documento tecnico (PDF), selezionalo dal menu e poni le tue domande.
+                Analizzerò il contenuto per darti risposte precise e sintetiche.
+            </div>
+            <div id="typing-indicator" class="typing-indicator">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+        </main>
+
+        <footer>
+            <textarea id="user-input" placeholder="Domanda tecnica"></textarea>
+            <button id="send-btn"></button>
+        </footer>
+
+    </div>
+
+    <!--
+        Data bridge: Flask injects the list of indexed documents as a JSON
+        attribute so JavaScript can populate the selector on page load
+        without an extra API call.
+    -->
+    <div id="data-bridge"
+         data-files='{{ existing_files | tojson | safe }}'
+         style="display: none;">
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,275 @@
+:root {
+    --green-primary:   #008069;
+    --green-dark:      #005d4b;
+    --green-accent:    #00a884;
+    --grey-mid:        #93aebb;
+    --bubble-user:     #dcf8c6;
+    --spinner-cyan:    #00ffcc;
+    --text-dark:       #111b21;
+    --text-light:      #e9edef;
+    --bg-chat:         #d1d7db;
+}
+
+/* ---------------------------------------------------------------------------
+   Layout
+--------------------------------------------------------------------------- */
+body {
+    font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+    background-color: var(--bg-chat);
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    height: 100vh;
+}
+
+.app-container {
+    width: 100%;
+    max-width: 900px;
+    height: 95vh;
+    margin-top: 2.5vh;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+/* ---------------------------------------------------------------------------
+   Header & controls bar
+--------------------------------------------------------------------------- */
+header {
+    background-color: var(--green-primary);
+    color: white;
+    padding: 15px 20px;
+}
+
+#bot-logo {
+    width: 45px;
+    height: 45px;
+    background-color: var(--grey-mid);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.6rem;
+    flex-shrink: 0;
+}
+
+.controls-bar {
+    display: flex;
+    gap: 30px;
+    margin-top: 15px;
+    padding: 15px;
+    background-color: var(--green-dark);
+    border-radius: 8px;
+    align-items: flex-start;
+}
+
+.control-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* ---------------------------------------------------------------------------
+   Form elements
+--------------------------------------------------------------------------- */
+label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-light);
+}
+
+select,
+input[type="file"] {
+    padding: 8px;
+    border-radius: 4px;
+    border: none;
+    font-size: 0.85rem;
+    background: white;
+    color: var(--text-dark);
+}
+
+#upload-btn {
+    background: var(--green-accent);
+    color: white;
+    border: none;
+    padding: 9px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+#send-btn {
+    background: var(--green-dark);
+    color: white;
+    border: none;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+#send-btn::after {
+    content: '➤';
+    font-size: 1.2rem;
+    margin-left: 3px;
+}
+
+/* Unified disabled state for all interactive elements */
+input:disabled,
+button:disabled,
+select:disabled,
+textarea:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    filter: grayscale(0.3);
+}
+
+textarea:disabled {
+    background-color: var(--text-light);
+}
+
+/* ---------------------------------------------------------------------------
+   Chat window
+--------------------------------------------------------------------------- */
+#chat-window {
+    flex: 1;
+    padding: 20px 20px 50px;
+    overflow-y: auto;
+    background-color: var(--grey-mid);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.msg {
+    padding: 12px 16px;
+    border-radius: 8px;
+    max-width: 80%;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.user {
+    align-self: flex-end;
+    background: var(--bubble-user);
+    border-bottom-right-radius: 0;
+    color: var(--text-dark);
+}
+
+.ai {
+    align-self: flex-start;
+    background: white;
+    border-bottom-left-radius: 0;
+    color: var(--text-dark);
+}
+
+.system-msg {
+    align-self: center;
+    background: #fff3cd;
+    color: #856404;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    padding: 5px 15px;
+    border-radius: 20px;
+    border: 1px solid #ffeeba;
+    margin: 10px 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Footer & textarea
+--------------------------------------------------------------------------- */
+footer {
+    padding: 15px 20px 25px;
+    background-color: var(--green-primary);
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+textarea {
+    flex: 1;
+    padding: 11px 18px;
+    line-height: 21px;
+    border: 1px solid var(--text-light);
+    border-radius: 20px;
+    font-family: inherit;
+    font-size: 1rem;
+    outline: none;
+    min-height: 45px;
+    max-height: 150px;
+    height: 45px;
+    box-sizing: border-box;
+    resize: none;
+    overflow-y: hidden;
+    background: white;
+    transition: background 0.2s;
+}
+
+/* ---------------------------------------------------------------------------
+   Loader & typing indicator
+--------------------------------------------------------------------------- */
+.loader-wrapper {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.loader-wrapper span {
+    color: var(--text-light);
+    font-size: 0.85rem;
+}
+
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 3px solid rgba(0, 255, 204, 0.2);
+    border-top-color: var(--spinner-cyan);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.typing-indicator {
+    display: none;
+    align-self: flex-start;
+    background: white;
+    padding: 12px 18px;
+    border-radius: 8px;
+    gap: 5px;
+}
+
+.typing-indicator.active {
+    display: flex;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    background: var(--green-primary);
+    border-radius: 50%;
+    animation: bounce 1.4s infinite;
+}
+
+.dot:nth-child(2) { animation-delay: 0.2s; }
+.dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes bounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40%           { transform: scale(1); }
+}

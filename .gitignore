@@ -1,0 +1,23 @@
+# Ambiente virtuale
+venv/
+.venv/
+
+# Variabili d'ambiente
+.env
+
+# Cartelle generate a runtime
+chroma_db/
+uploads/
+parsed_cache/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

@@ -1,0 +1,18 @@
+flask
+python-dotenv
+
+# RAG framework
+llama-index-core
+llama-index-llms-groq
+llama-index-embeddings-huggingface
+llama-index-vector-stores-chroma
+
+# PDF parsing
+pymupdf4llm
+
+# Vector database
+chromadb
+
+# Embedding model runtime
+sentence-transformers
+torch
