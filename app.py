@@ -40,14 +40,13 @@ app.config['CACHE_FOLDER']  = CACHE_FOLDER
 # tokens (4 chunks × 512 + response), keeping us well within budget.
 Settings.llm = Groq(model="llama-3.1-8b-instant", temperature=0)
 
-# Multilingual-e5-small handles Italian queries against English technical
+# Multilingual-e5-small handles queries in any language against technical
 # text without explicit translation, at a fraction of larger models' cost.
 Settings.embed_model = HuggingFaceEmbedding(model_name="intfloat/multilingual-e5-small")
 
-# chunk_size=512 produces specific, focused embeddings. The original 2048
-# setting created chunks of ~8 KB whose embeddings were too generic to
-# distinguish a table row from a section header. chunk_overlap=64 prevents
-# values from being split across chunk boundaries.
+# chunk_size=512 produces specific, focused embeddings. Larger chunks create
+# embeddings too generic to distinguish a table row from a section header.
+# chunk_overlap=64 prevents values from being split across chunk boundaries.
 # include_metadata prepends page_number to each chunk's embedding input;
 # include_prev_next_rel links adjacent chunks, preserving table continuity.
 Settings.text_splitter = SentenceSplitter(
@@ -68,12 +67,27 @@ document_engines: dict = {}
 # PRE-PROCESSING
 # ---------------------------------------------------------------------------
 
-# Noise markers common to ST datasheets: revision stamps, page counters,
-# and the device header repeated on every page. Used by is_noise_page().
+# Generic noise patterns common across most PDF documents:
+#   - Page counters in "N/TOT" format (e.g. "9/115", "3/42")
+#   - Revision/version stamps (e.g. "Rev 20", "v2.1", "Version 3")
+#   - Short repeated headers (3–6 word bold phrases repeated on every page)
+# Used by is_noise_page() to detect pages with no meaningful content.
 _NOISE_PATTERNS = re.compile(
-    r'DS\d+ Rev \d+|'   # revision stamp, e.g. "DS5319 Rev 20"
-    r'\d+/\d+|'         # page counter, e.g. "9/115"
-    r'\*\*[^*]{5,50}\*\*'  # bold device name in the page header
+    r'\b\d+/\d+\b|'                    # page counter: "9/115"
+    r'\bRev(?:ision)?\s*[\d.]+\b|'     # revision stamp: "Rev 20", "Revision 2.1"
+    r'\bv(?:er(?:sion)?)?\s*[\d.]+\b|' # version stamp: "v2.1", "Version 3"
+    r'^\*\*[^*\n]{3,40}\*\*\s*$',      # short bold header on its own line
+    re.MULTILINE | re.IGNORECASE
+)
+
+# Section titles that typically introduce the key specifications summary
+# on the cover page of a technical document. Ordered from most to least common.
+_FEATURES_TITLES = re.compile(
+    r'(#{1,3}\s*\*{0,2}'
+    r'(?:Features|Key\s+Features|Highlights|Product\s+Overview|'
+    r'Specifications?\s+Summary|Key\s+Specifications?|Overview)'
+    r'\*{0,2}.*?)(?=\n#{1,3}\s|\Z)',
+    re.DOTALL | re.IGNORECASE,
 )
 
 
@@ -110,21 +124,20 @@ def is_noise_page(text: str) -> bool:
 
 def extract_features_summary(page_text: str) -> str:
     """
-    Extracts the Features section from the datasheet cover page (page 1).
+    Extracts the key specifications section from the document cover page.
 
-    The cover page is dense with key specs (Flash, SRAM, CPU frequency,
-    peripherals) but small (~680 tokens), so it may not appear in top-k
-    retrieval for queries targeting specific sections. Injecting it as
-    metadata on every Document guarantees the LLM always has access to
-    device-level specs regardless of which chunks are retrieved.
+    Cover pages in technical documents are dense with critical specs but
+    small (~500-800 tokens), so they may not appear in top-k retrieval for
+    queries targeting specific sections deep in the document. Injecting the
+    summary as metadata on every Document guarantees the LLM always has
+    access to top-level specs regardless of which chunks are retrieved.
 
-    Returns the first 1200 chars of the Features section, or empty string.
+    Recognized section titles: Features, Key Features, Highlights,
+    Product Overview, Specifications Summary, Key Specifications, Overview.
+
+    Returns the first 1200 chars of the matched section, or empty string.
     """
-    match = re.search(
-        r'(#{1,3}\s*\*{0,2}Features\*{0,2}.*?)(?=\n#{1,3}\s|\Z)',
-        page_text,
-        re.DOTALL | re.IGNORECASE,
-    )
+    match = _FEATURES_TITLES.search(page_text)
     return match.group(1).strip()[:1200] if match else ""
 
 
@@ -139,9 +152,9 @@ def parse_md_to_documents(md_path: str, filename: str) -> list[Document]:
     in the metadata.
 
     An additional "anchor" Document is prepended containing only the
-    Features summary with an explicit section tag. This ensures that
-    general device queries (SRAM, Flash, CPU) always retrieve it with
-    a high similarity score, even when cover-page chunks aren't in top-k.
+    features summary with an explicit section tag. This ensures that
+    general spec queries always retrieve it with a high similarity score,
+    even when cover-page chunks aren't in top-k.
     """
     with open(md_path, "r", encoding="utf-8") as f:
         raw_content = f.read()
@@ -157,7 +170,7 @@ def parse_md_to_documents(md_path: str, filename: str) -> list[Document]:
 
     if features_summary:
         documents.append(Document(
-            text=f"DEVICE FEATURES SUMMARY — page 1 of {filename}:\n\n{features_summary}",
+            text=f"DOCUMENT FEATURES SUMMARY — page 1 of {filename}:\n\n{features_summary}",
             metadata={
                 "filename":    filename,
                 "page_number": 1,
@@ -169,7 +182,7 @@ def parse_md_to_documents(md_path: str, filename: str) -> list[Document]:
     for idx, raw_page in enumerate(raw_pages):
         cleaned = remove_toc(raw_page)
 
-        # The cover page (idx=0) is never discarded: it holds the Features.
+        # The cover page (idx=0) is never discarded: it holds the key specs.
         if idx > 0 and is_noise_page(cleaned):
             discarded += 1
             continue
@@ -177,8 +190,8 @@ def parse_md_to_documents(md_path: str, filename: str) -> list[Document]:
         documents.append(Document(
             text=cleaned,
             metadata={
-                "filename":        filename,
-                "page_number":     idx + 1,   # convert 0-based index → 1-based page number
+                "filename":         filename,
+                "page_number":      idx + 1,  # convert 0-based index → 1-based page number
                 "features_summary": features_summary,
             },
             # Exclude features_summary from embedding: it's identical across
@@ -227,26 +240,27 @@ def get_chat_engine(filename: str):
         chat_mode="context",
         similarity_top_k=4,
         system_prompt=(
-            "You are a technical assistant specialized in analyzing electronic component datasheets. "
-            "Your goal is to extract numerical data and specifications with engineering-grade accuracy.\n\n"
+            "You are a technical assistant specialized in analyzing complex PDF documents "
+            "such as datasheets, manuals, and technical specifications.\n"
+            "Your goal is to extract data and specifications with precision and accuracy.\n\n"
             "Each retrieved chunk includes:\n"
-            "  - Page text with tables in markdown format.\n"
+            "  - Page text, which may contain tables in markdown format.\n"
             "  - 'page_number' metadata: the page number in the original PDF.\n"
-            "  - 'features_summary' metadata: a summary of the device's key specs "
-            "    (Flash, SRAM, CPU frequency, peripherals).\n\n"
+            "  - 'features_summary' metadata: a summary of the document's key specifications, "
+            "    extracted from the cover page.\n\n"
             "Rules to follow:\n"
             "1. CITE THE PAGE: Always indicate the page number for every value you report "
             "   (e.g. 'Table 13, page 40').\n"
-            "2. TABLES FIRST: Look for values in markdown tables and report them exactly as written, "
-            "   including units (V, mA, MHz, etc.).\n"
-            "3. USE FEATURES SUMMARY: For general device specs (SRAM, Flash, CPU, peripherals), "
-            "   use the 'features_summary' metadata if the retrieved chunk doesn't contain the data.\n"
-            "4. DISTINGUISH OPERATING REGIMES:\n"
+            "2. TABLES FIRST: Look for values in markdown tables and report them exactly "
+            "   as written, including units of measure.\n"
+            "3. USE FEATURES SUMMARY: For general top-level specifications, use the "
+            "   'features_summary' metadata if the retrieved chunk doesn't contain the data.\n"
+            "4. DISTINGUISH OPERATING REGIMES when present:\n"
             "   - 'Absolute Maximum Ratings': hard limits — never to be exceeded.\n"
             "   - 'Operating Conditions': guaranteed values under normal operation.\n"
-            "   - 'Typical values': measured at TA=25°C, VDD=3.3V — not guaranteed.\n"
-            "5. MATCH EXACT CONDITIONS: If the query specifies a condition (frequency, temperature, "
-            "   peripherals on/off), find the table row that matches exactly.\n"
+            "   - 'Typical values': measured under specific conditions — not guaranteed.\n"
+            "5. MATCH EXACT CONDITIONS: If the query specifies a condition (frequency, "
+            "   temperature, load, mode), find the table row that matches exactly.\n"
             "6. HONESTY: If data is absent or ambiguous, say so clearly. Never fabricate values."
         ),
     )
@@ -316,8 +330,7 @@ def upload():
         VectorStoreIndex.from_documents(documents, storage_context=storage_context)
         log.info(f"Indexed {len(documents)} documents for '{filename}'.")
 
-        if filename in document_engines:
-            del document_engines[filename]
+        document_engines.pop(filename, None)
 
         return jsonify({
             "status": "success",
