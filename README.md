@@ -33,7 +33,7 @@ User query → multilingual embedding → top-k retrieval → Groq LLM → answe
 
 **Key design decisions:**
 
-**chunk_size=512 instead of 2048** — Large chunks produce generic embeddings
+**chunk_size=512** — Large chunks produce generic embeddings
 that flatten similarity scores. At 512 tokens, each chunk maps to a specific
 table or paragraph, making retrieval significantly more precise.
 
