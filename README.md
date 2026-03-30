@@ -71,16 +71,19 @@ against English technical text without explicit translation.
 | Embeddings | intfloat/multilingual-e5-small (HuggingFace) |
 | LLM | Llama 3.1 8B via Groq API |
 | Frontend | Vanilla JS, HTML, CSS |
+| Containerization | Docker / Docker Compose |
 
 ---
 
 ## Setup & Installation
 
 ### Prerequisites
-- Python 3.10+
+- Python 3.11+
 - A [Groq API key](https://console.groq.com) (free tier available)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (optional, for containerized setup)
 
-### Steps
+### Option 1 — Local setup
+
 ```bash
 # 1. Clone the repository
 git clone https://github.com/flaviodell/datasheet-expert-agent.git
@@ -103,6 +106,31 @@ python app.py
 ```
 
 Open your browser at `http://localhost:5000`.
+
+### Option 2 — Docker
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/flaviodell/datasheet-expert-agent.git
+cd datasheet-expert-agent
+
+# 2. Configure environment variables
+cp .env.example .env
+# Edit .env and add your Groq API key
+
+# 3. Build and start the container
+docker compose up --build
+```
+
+Open your browser at `http://localhost:5000`.
+
+To stop the container:
+```bash
+docker compose down
+```
+
+> **Data persistence:** uploaded PDFs, ChromaDB indexes, and parsed cache are
+> stored in named Docker volumes and survive container restarts.
 
 ---
 
